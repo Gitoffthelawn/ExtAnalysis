@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from pathlib import Path
 from typing import Optional
 import urllib.request
+import ssl         
+import certifi 
 import core.core as core
 import core.helper as helper
 import re
@@ -50,12 +52,13 @@ class ExtensionDownloader:
         try:
             request = urllib.request.Request(url, headers=self.headers)
 
-            # Add error handling for HTTP redirects
-            response = urllib.request.urlopen(request)
-            while response.geturl() != url:  # Handle redirects explicitly
+            # Use certifi CA bundle to fix SSL certificate verification on Windows/Linux
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
+            response = urllib.request.urlopen(request, context=ssl_context)
+            while response.geturl() != url:
                 url = response.geturl()
                 request = urllib.request.Request(url, headers=self.headers)
-                response = urllib.request.urlopen(request)
+                response = urllib.request.urlopen(request, context=ssl_context)
 
             save_path.write_bytes(response.read())
             core.updatelog(f"Extension downloaded successfully: {save_path}")
@@ -145,7 +148,9 @@ class ExtensionDownloader:
             return None
         try:
             request = urllib.request.Request(url, headers=self.headers)
-            with urllib.request.urlopen(request) as response:
+            # Use certifi CA bundle to fix SSL certificate verification on Windows/Linux
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
+            with urllib.request.urlopen(request, context=ssl_context) as response:
                 source_code = response.read().decode('utf-8')
 
             xpi_matches = re.findall(
